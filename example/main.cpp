@@ -54,6 +54,9 @@ int main(int argc, char* argv[]) {
 		while(!l_serial.available() && isRunning) {
 			this_thread::sleep_for(chrono::milliseconds(100));
 		}
+		if (!isRunning) {
+			break;
+		}
 
 		// Check if there is data to read
 		int bytesToRead = l_serial.available();
