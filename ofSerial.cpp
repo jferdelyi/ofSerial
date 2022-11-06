@@ -29,12 +29,12 @@
 #ifdef TARGET_LINUX
 	#include <linux/serial.h>
 	#include <unistd.h>
+	#include <cstring>
 	// Some things for serial compilation:
 	#define B14400	14400
 	#define B28800	28800
 #endif
 
-#include <cstring>
 #include <iostream>
 
 using std::vector;
@@ -322,7 +322,6 @@ bool ofSerial::setup(string portName, int baud){
 		}
 
 		struct termios options;
-		tcgetattr(fd, &oldoptions);
 		if(tcgetattr(fd, &oldoptions) != 0) {
 			std::cerr <<  "Error " << errno <<" from tcgetattr: " << strerror(errno) << std::endl;
 			return false;
@@ -388,32 +387,40 @@ bool ofSerial::setup(string portName, int baud){
 				std::cerr << "setup(): cannot set " << baud << " bps, setting to 9600" << std::endl;
 				break;
 		}
-		
+
 		options.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
 		options.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
 		options.c_cflag &= ~CSIZE; // Clear all bits that set the data size 
 		options.c_cflag |= CS8; // 8 bits per byte (most common)
+
 		#if defined( TARGET_LINUX )
 			options.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
 		#endif
+
 		options.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+
 		#if defined( TARGET_LINUX )
 			options.c_lflag &= ~ICANON;
 			options.c_lflag &= ~ECHO; // Disable echo
 		#endif
+
 		options.c_lflag &= ~ECHOE; // Disable erasure
 		options.c_lflag &= ~ECHONL; // Disable new-line echo
+
 		#if defined( TARGET_LINUX )
 			options.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
 			options.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
 		#endif
+
 		options.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
 		options.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
 		options.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+	
 		#if defined( TARGET_OSX )
 			options.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
 			options.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
 		#endif
+		
 		options.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
 		options.c_cc[VMIN] = 0;
 
@@ -421,6 +428,7 @@ bool ofSerial::setup(string portName, int baud){
 			std::cerr <<  "Error " << errno <<" from tcsetattr: " << strerror(errno) << std::endl;
 			return 1;
 		}
+		
 		#ifdef TARGET_LINUX
 			struct serial_struct kernel_serial_settings;
 			if (ioctl(fd, TIOCGSERIAL, &kernel_serial_settings) == 0) {
@@ -428,6 +436,7 @@ bool ofSerial::setup(string portName, int baud){
 				ioctl(fd, TIOCSSERIAL, &kernel_serial_settings);
 			}
 		#endif
+
 		bInited = true;
 		std::cout << "opened " << portName << " sucessfully @ " << baud << " bps" << std::endl;
 
