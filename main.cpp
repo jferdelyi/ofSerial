@@ -14,7 +14,7 @@ void stopHandler(int) {
 }
 
 // ofSerial standalone example
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 	// Check and get params 
 	if (argc < 3) {
 		std::cout << "Usage: serial <port> <baudrate>" << std::endl;
@@ -36,14 +36,14 @@ int main(int argc, char *argv[]) {
 
 	// While is running
 	std::string bytesToProcess;
+	l_serial.writeBytes('0');
 	while (isRunning) {
-
 		// Check if there is data to read
 		int bytesToRead = l_serial.available();
 		if (bytesToRead > 0) {
 
 			// Print number of bytes 
-			std::cout << "RECEIVED " << bytesToRead << " BYTES" << std::endl;
+			std::cout << "RECEIVED " << std::dec << bytesToRead << " BYTES" << std::endl;
 			l_serial.readBytes(bytesToProcess, bytesToRead);
 
 			// Print hexa data
@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
 			}
 
 			// Print string data 
-			std::cout <<  " (" << bytesToProcess << ")" << std::endl;
+			std::cout << std::dec << " (" << bytesToProcess << ")" << std::endl;
 
 			// Write TEST to serial
-			l_serial.writeBytes("TEST");
+			l_serial.writeBytes("1");
 		}
 	}
 

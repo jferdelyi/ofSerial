@@ -23,18 +23,19 @@
 	#include <sys/ioctl.h>
 	#include <getopt.h>
 	#include <dirent.h>
+	#include <fcntl.h>
 #endif
-
-#include <fcntl.h>
-#include <errno.h>
-#include <ctype.h>
-#include <algorithm>
-#include <cstring>
-#include <iostream>
 
 #ifdef TARGET_LINUX
 	#include <linux/serial.h>
+	#include <unistd.h>
+	// Some things for serial compilation:
+	#define B14400	14400
+	#define B28800	28800
 #endif
+
+#include <cstring>
+#include <iostream>
 
 using std::vector;
 using std::string;
@@ -197,7 +198,7 @@ void ofSerial::buildDeviceList(){
 		int deviceCount		= 0;
 
 		if (dir == NULL){
-			std::cerr << "buildDeviceList(): error listing devices in /dev" << "\r\n";
+			std::cerr << "buildDeviceList(): error listing devices in /dev" << "\r\n" << std::endl;
 		} else {
 			//for each device
 			while((entry = readdir(dir)) != NULL){
@@ -224,7 +225,7 @@ void ofSerial::buildDeviceList(){
 	#ifdef TARGET_WIN32
 
 		enumerateWin32Ports();
-		std::cout << "found " << nPorts << " devices";
+		std::cout << "found " << nPorts << " devices" << std::endl;
 		for(int i = 0; i < nPorts; i++){
 			//NOTE: we give the short port name for both as that is what the user should pass and the short name is more friendly
 			devices.push_back(ofSerialDeviceInfo(string(portNamesShort[i]), string(portNamesFriendly[i]), i));
@@ -251,7 +252,7 @@ void ofSerial::listDevices(){
 	buildDeviceList();
 
 	for(auto & device: devices){
-		std::cout << "[" << device.getDeviceID() << "] = "<< device.getDeviceName().c_str();
+		std::cout << "[" << device.getDeviceID() << "] = "<< device.getDeviceName().c_str() << std::endl;
 	}
 }
 
@@ -296,7 +297,7 @@ bool ofSerial::setup(int deviceNumber, int baud){
 	if(deviceNumber < (int)devices.size()){
 		return setup(devices[deviceNumber].devicePath, baud);
 	} else {
-		std::cerr << "couldn't find device " << deviceNumber << ", only " << devices.size() << " devices found";
+		std::cerr << "couldn't find device " << deviceNumber << ", only " << devices.size() << " devices found" << std::endl;
 		return false;
 	}
 
@@ -316,86 +317,110 @@ bool ofSerial::setup(string portName, int baud){
 		std::cout << "opening " << portName << " @ " << baud << " bps" << std::endl;
 		fd = open(portName.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
 		if(fd == -1){
-			std::cerr << "unable to open " << portName << std::endl;
+			std::cerr << "unable to open " << portName << std::endl << std::endl;
 			return false;
 		}
 
 		struct termios options;
 		tcgetattr(fd, &oldoptions);
+		if(tcgetattr(fd, &oldoptions) != 0) {
+			std::cerr <<  "Error " << errno <<" from tcgetattr: " << strerror(errno) << std::endl;
+			return false;
+		}
 		options = oldoptions;
+
 		switch(baud){
 			case 300:
-			cfsetispeed(&options, B300);
+				cfsetispeed(&options, B300);
 				cfsetospeed(&options, B300);
 				break;
-		   case 1200:
-			cfsetispeed(&options, B1200);
+			case 1200:
+				cfsetispeed(&options, B1200);
 				cfsetospeed(&options, B1200);
 				break;
-		   case 2400:
-			cfsetispeed(&options, B2400);
+			case 2400:
+				cfsetispeed(&options, B2400);
 				cfsetospeed(&options, B2400);
 				break;
-		   case 4800:
-			cfsetispeed(&options, B4800);
-		cfsetospeed(&options, B4800);
-		break;
-		   case 9600:
-			cfsetispeed(&options, B9600);
-		cfsetospeed(&options, B9600);
-		break;
-		   case 14400:
-			cfsetispeed(&options, B14400);
-		cfsetospeed(&options, B14400);
-		break;
-		   case 19200:
-			cfsetispeed(&options, B19200);
-		cfsetospeed(&options, B19200);
-		break;
-		   case 28800:
-			cfsetispeed(&options, B28800);
-		cfsetospeed(&options, B28800);
-		break;
-		   case 38400:
-			cfsetispeed(&options, B38400);
-		cfsetospeed(&options, B38400);
-		break;
-		   case 57600:
-			cfsetispeed(&options, B57600);
-		cfsetospeed(&options, B57600);
-		break;
-		   case 115200:
-			cfsetispeed(&options, B115200);
-		cfsetospeed(&options, B115200);
-		break;
-		   case 230400:
-			cfsetispeed(&options, B230400);
-		cfsetospeed(&options, B230400);
-		break;
-		   case 12000000: 
-			cfsetispeed(&options, 12000000);
-		cfsetospeed(&options, 12000000);	
-		break;
-		   default:
-			cfsetispeed(&options, B9600);
-		cfsetospeed(&options, B9600);
-		std::cerr << "setup(): cannot set " << baud << " bps, setting to 9600" << std::endl;
-		break;
+			case 4800:
+				cfsetispeed(&options, B4800);
+				cfsetospeed(&options, B4800);
+				break;
+			case 9600:
+				cfsetispeed(&options, B9600);
+				cfsetospeed(&options, B9600);
+				break;
+			case 14400:
+				cfsetispeed(&options, B14400);
+				cfsetospeed(&options, B14400);
+				break;
+			case 19200:
+				cfsetispeed(&options, B19200);
+				cfsetospeed(&options, B19200);
+				break;
+			case 28800:
+				cfsetispeed(&options, B28800);
+				cfsetospeed(&options, B28800);
+				break;
+			case 38400:
+				cfsetispeed(&options, B38400);
+				cfsetospeed(&options, B38400);
+				break;
+			case 57600:
+				cfsetispeed(&options, B57600);
+				cfsetospeed(&options, B57600);
+				break;
+			case 115200:
+				cfsetispeed(&options, B115200);
+				cfsetospeed(&options, B115200);
+				break;
+			case 230400:
+				cfsetispeed(&options, B230400);
+				cfsetospeed(&options, B230400);
+				break;
+			case 12000000: 
+				cfsetispeed(&options, 12000000);
+				cfsetospeed(&options, 12000000);	
+				break;
+			default:
+				cfsetispeed(&options, B9600);
+				cfsetospeed(&options, B9600);
+				std::cerr << "setup(): cannot set " << baud << " bps, setting to 9600" << std::endl;
+				break;
 		}
-
-		options.c_cflag |= (CLOCAL | CREAD);
-		options.c_cflag &= ~PARENB;
-		options.c_cflag &= ~CSTOPB;
-		options.c_cflag &= ~CSIZE;
-		options.c_iflag &= (tcflag_t) ~(INLCR | IGNCR | ICRNL | IGNBRK);
-		options.c_oflag &= (tcflag_t) ~(OPOST);
-		options.c_cflag |= CS8;
+		
+		options.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
+		options.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
+		options.c_cflag &= ~CSIZE; // Clear all bits that set the data size 
+		options.c_cflag |= CS8; // 8 bits per byte (most common)
 		#if defined( TARGET_LINUX )
-            options.c_iflag &= ~(IXON | IXOFF | IXANY); // turn off software xon/xoff flow ctrl
-			options.c_cflag |= CRTSCTS;
-			options.c_lflag &= ~(ICANON | ECHO | ISIG);
+			options.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
 		#endif
-		tcsetattr(fd, TCSANOW, &options);
+		options.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+		#if defined( TARGET_LINUX )
+			options.c_lflag &= ~ICANON;
+			options.c_lflag &= ~ECHO; // Disable echo
+		#endif
+		options.c_lflag &= ~ECHOE; // Disable erasure
+		options.c_lflag &= ~ECHONL; // Disable new-line echo
+		#if defined( TARGET_LINUX )
+			options.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+			options.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+		#endif
+		options.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
+		options.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+		options.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+		#if defined( TARGET_OSX )
+			options.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
+			options.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
+		#endif
+		options.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+		options.c_cc[VMIN] = 0;
+
+		if (tcsetattr(fd, TCSANOW, &options) != 0) {
+			std::cerr <<  "Error " << errno <<" from tcsetattr: " << strerror(errno) << std::endl;
+			return 1;
+		}
 		#ifdef TARGET_LINUX
 			struct serial_struct kernel_serial_settings;
 			if (ioctl(fd, TIOCGSERIAL, &kernel_serial_settings) == 0) {
@@ -427,7 +452,7 @@ bool ofSerial::setup(string portName, int baud){
 							OPEN_EXISTING, 0, 0);
 
 		if(hComm == INVALID_HANDLE_VALUE){
-			std::cerr << "setup(): unable to open " << portName;
+			std::cerr << "setup(): unable to open " << portName << std::endl;
 			return false;
 		}
 
@@ -443,14 +468,14 @@ bool ofSerial::setup(string portName, int baud){
 		swprintf(buf, L"baud=%d parity=N data=8 stop=1", bps);
 
 		if(!BuildCommDCBW(buf, &cfg.dcb)){
-			std::cerr << "setup(): unable to build comm dcb, (" << buf << ")";
+			std::cerr << "setup(): unable to build comm dcb, (" << buf << ")" << std::endl;
 		}
 
 		// Set baudrate and bits etc.
 		// Note that BuildCommDCB() clears XON/XOFF and hardware control by default
 
 		if(!SetCommState(hComm, &cfg.dcb)){
-			std::cerr << "setup(): couldn't set comm state: " << cfg.dcb.BaudRate << " bps, xio " << cfg.dcb.fInX << "/" << cfg.dcb.fOutX;
+			std::cerr << "setup(): couldn't set comm state: " << cfg.dcb.BaudRate << " bps, xio " << cfg.dcb.fInX << "/" << cfg.dcb.fOutX << std::endl;
 		}
 		//std::cout << "bps=" << cfg.dcb.BaudRate << ", xio=" << cfg.dcb.fInX << "/" << cfg.dcb.fOutX;
 
@@ -470,7 +495,7 @@ bool ofSerial::setup(string portName, int baud){
 
 	#else
 
-		std::cerr << "not implemented in this platform";
+		std::cerr << "not implemented in this platform" << std::endl;
 		return false;
 
 	#endif
@@ -499,7 +524,7 @@ long ofSerial::writeBytes(const std::string& buffer) {
 //----------------------------------------------------------------
 long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 	if(!bInited){
-		std::cerr << "writeBytes(): serial not inited";
+		std::cerr << "writeBytes(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -529,7 +554,7 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 
 		DWORD written;
 		if(!WriteFile(hComm, buffer, length, &written,0)){
-			 std::cerr << "writeBytes(): couldn't write to port";
+			 std::cerr << "writeBytes(): couldn't write to port" << std::endl;
 			 return OF_SERIAL_ERROR;
 		}
 		ofLogVerbose("ofSerial") <<  "wrote " << (int) written << " bytes";
@@ -545,7 +570,7 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 //----------------------------------------------------------------
 long ofSerial::readBytes(unsigned char* buffer, size_t length){
 	if (!bInited){
-		std::cerr << "readBytes(): serial not inited";
+		std::cerr << "readBytes(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -555,7 +580,7 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 		if(nRead < 0){
 			if ( errno == EAGAIN )
 				return OF_SERIAL_NO_DATA;
-			std::cerr << "readBytes(): couldn't read from port: " << errno << " " << strerror(errno);
+			std::cerr << "readBytes(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 		return nRead;
@@ -564,14 +589,14 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 
 		DWORD nRead = 0;
 		if (!ReadFile(hComm, buffer, length, &nRead, 0)){
-			std::cerr << "readBytes(): couldn't read from port";
+			std::cerr << "readBytes(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 		return (int)nRead;
 
 	#else
 
-		std::cerr << "not defined in this platform";
+		std::cerr << "not defined in this platform" << std::endl;
 		return -1;
 
 	#endif
@@ -585,7 +610,9 @@ long ofSerial::readBytes(char* buffer, size_t length){
 //----------------------------------------------------------------
 long ofSerial::readBytes(std::string& buffer, size_t length) {
 	char* tmpBuffer = new char[length];
+	memset(tmpBuffer, 0, sizeof(char) * length);
 	const auto& nBytes = readBytes(tmpBuffer, length);
+	tmpBuffer[nBytes] = '\0';
 	buffer = std::string(tmpBuffer);
 	delete[] tmpBuffer;
 	return nBytes;
@@ -594,7 +621,7 @@ long ofSerial::readBytes(std::string& buffer, size_t length) {
 //----------------------------------------------------------------
 int ofSerial::readByte(){
 	if(!bInited){
-		std::cerr << "readByte(): serial not inited";
+		std::cerr << "readByte(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -607,7 +634,7 @@ int ofSerial::readByte(){
 			if ( errno == EAGAIN ){
 				return OF_SERIAL_NO_DATA;
 			}
-			std::cerr << "readByte(): couldn't read from port: " << errno << " " << strerror(errno);
+			std::cerr << "readByte(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 
@@ -619,7 +646,7 @@ int ofSerial::readByte(){
 
 		DWORD nRead;
 		if(!ReadFile(hComm, &tmpByte, 1, &nRead, 0)){
-			std::cerr << "readByte(): couldn't read from port";
+			std::cerr << "readByte(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 	
@@ -629,7 +656,7 @@ int ofSerial::readByte(){
 
 	#else
 
-		std::cerr << "not defined in this platform";
+		std::cerr << "not defined in this platform" << std::endl;
 		return OF_SERIAL_ERROR;
 
 	#endif
@@ -641,7 +668,7 @@ int ofSerial::readByte(){
 //----------------------------------------------------------------
 void ofSerial::flush(bool flushIn, bool flushOut){
 	if(!bInited){
-		std::cerr << "flush(): serial not inited";
+		std::cerr << "flush(): serial not inited" << std::endl;
 		return;
 	}
 
@@ -668,7 +695,7 @@ void ofSerial::flush(bool flushIn, bool flushOut){
 
 void ofSerial::drain(){
 	if(!bInited){
-		std::cerr << "drain(): serial not inited";
+		std::cerr << "drain(): serial not inited" << std::endl;
 		return;
 	}
 
@@ -682,7 +709,7 @@ void ofSerial::drain(){
 //-------------------------------------------------------------
 int ofSerial::available(){
 	if(!bInited){
-		std::cerr << "available(): serial not inited";
+		std::cerr << "available(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
