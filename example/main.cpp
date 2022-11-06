@@ -40,7 +40,6 @@ int main(int argc, char* argv[]) {
 
 	// While is running
 	string bytesToProcess;
-	l_serial.flush(true, true);
 	cout << endl;
 	while (isRunning) {
 		// Get and send data
