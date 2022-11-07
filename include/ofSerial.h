@@ -21,41 +21,13 @@
 
 #if defined( __WIN32__ ) || defined( _WIN32 )
 	#define TARGET_WIN32
-	#if defined(_MSC_VER)
-		#define TARGET_WINVS
-	#endif
-	#if defined(__MINGW32__) || defined(__MINGW64__)
-		#define TARGET_MINGW
-	#endif
 #elif defined( __APPLE_CC__)
-	#include <TargetConditionals.h>
-    #define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
-	#if (TARGET_OS_IPHONE || TARGET_OS_IOS || TARGET_OS_SIMULATOR || TARGET_IPHONE_SIMULATOR) && !TARGET_OS_TV && !TARGET_OS_WATCH
-        #define TARGET_OF_IPHONE
-        #define TARGET_OF_IOS
-    #elif TARGET_OS_TV
-        #define TARGET_OF_IOS
-        #define TARGET_OF_TVOS
-    #elif TARGET_OS_WATCH
-        #define TARGET_OF_IOS
-        #define TARGET_OF_WATCHOS
-	#else
-		#define TARGET_OSX
-	#endif
-#elif defined (__ANDROID__)
-	#define TARGET_ANDROID
-#elif defined(__ARMEL__)
-	#define TARGET_LINUX
-	#define TARGET_LINUX_ARM
-#elif defined(__EMSCRIPTEN__)
-	#define TARGET_EMSCRIPTEN
-	#define TARGET_NO_THREADS
-	#define TARGET_IMPLEMENTS_URL_LOADER
+	#define TARGET_OSX
 #else
 	#define TARGET_LINUX
 #endif
 
-#if defined( TARGET_OSX ) || defined( TARGET_LINUX ) || defined (TARGET_ANDROID)
+#if defined( TARGET_OSX ) || defined( TARGET_LINUX )
 	#include <termios.h>
 #else
 	#include <Windows.h>
