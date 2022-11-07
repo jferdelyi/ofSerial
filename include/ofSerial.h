@@ -55,22 +55,13 @@
 	#define TARGET_LINUX
 #endif
 
-#include <climits>
-
 #if defined( TARGET_OSX ) || defined( TARGET_LINUX ) || defined (TARGET_ANDROID)
 	#include <termios.h>
+	#include <climits>
 #else
-	#include <winbase.h>
-	#include <tchar.h>
-	#include <iostream>
-	#include <string.h>
-	#include <devpropdef.h>
+	#include <Windows.h>
 	#include <setupapi.h>
-	#include <regstr.h>
-	/// \cond INTERNAL
 	#define MAX_SERIAL_PORTS 256
-	/// \endcond
-	#include <winioctl.h>
 #endif
 
 #include <vector>
@@ -327,8 +318,8 @@ public:
 	///
 	/// ~~~~{.cpp}
 	/// unsigned char buf_str[3] = {'o', 'f', '!'};
-	/// ushort buf_data[2] = {0x31, 0xDA};
-	/// ushort data = 0x39;
+	/// char buf_data[2] = {0x31, 0xDA};
+	/// unsigned char data = 0x39;
 	///
 	/// device.writeBytes(data);
 	/// device.writeBytes('o');

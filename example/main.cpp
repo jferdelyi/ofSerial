@@ -5,17 +5,11 @@
 #include "ofSerial.h"
 
 #include <iostream>
-#include <signal.h>
-#include <chrono>
 #include <thread>
 
 using namespace std;
 
 static bool isRunning = true;
-
-void stopHandler(int) {
-	isRunning = false;
-}
 
 // ofSerial standalone example
 int main(int argc, char* argv[]) {
@@ -27,13 +21,6 @@ int main(int argc, char* argv[]) {
 	char* port = argv[1];
 	int baudrate = atoi(argv[2]);
 
-	// Catch ctrl+c signal
-	struct sigaction sigIntHandler;
-	sigIntHandler.sa_handler = stopHandler;
-	sigemptyset(&sigIntHandler.sa_mask);
-	sigIntHandler.sa_flags = 0;
-	sigaction(SIGINT, &sigIntHandler, NULL);
-
 	// Create and connect serial
 	ofSerial l_serial;
 	bool l_connected = l_serial.setup(port, baudrate);
@@ -44,15 +31,21 @@ int main(int argc, char* argv[]) {
 	while (isRunning) {
 		// Get and send data
 		string input;
-		cout << "SEND DATA: ";
+		cout << "SEND DATA (EXIT to quit): ";
 		getline(cin, input); 
 		cout << endl;
+		if (input == "") {
+			continue;
+		} else if (input == "EXIT") {
+			break;
+		}
 		l_serial.writeBytes(input);
 
 		// Wait the answer
 		while(!l_serial.available() && isRunning) {
 			this_thread::sleep_for(chrono::milliseconds(100));
 		}
+		
 		if (!isRunning) {
 			break;
 		}
@@ -67,7 +60,7 @@ int main(int argc, char* argv[]) {
 		// Print hexa data
 		cout << "0x" << hex << uppercase;
 		for (int i = 0; i < bytesToRead; ++i) {
-			cout << ((ushort*)bytesToProcess.c_str())[i];
+			cout << ((unsigned short*)bytesToProcess.c_str())[i];
 		}
 
 		// Print string data 
@@ -75,7 +68,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Close and return
-	cout <<  "FINISHED" << endl;
+	cout << "FINISHED" << endl;
 	l_serial.close();
 	return EXIT_SUCCESS;
 }

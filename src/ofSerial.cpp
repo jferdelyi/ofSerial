@@ -566,7 +566,7 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 			 std::cerr << "writeBytes(): couldn't write to port" << std::endl;
 			 return OF_SERIAL_ERROR;
 		}
-		ofLogVerbose("ofSerial") <<  "wrote " << (int) written << " bytes";
+		std::cout <<  "wrote " << (int) written << " bytes";
 		return (int)written;
 
 	#else
@@ -618,7 +618,7 @@ long ofSerial::readBytes(char* buffer, size_t length){
 
 //----------------------------------------------------------------
 long ofSerial::readBytes(std::string& buffer, size_t length) {
-	char* tmpBuffer = new char[length];
+	char* tmpBuffer = new char[length + 1];
 	memset(tmpBuffer, 0, sizeof(char) * length);
 	const auto& nBytes = readBytes(tmpBuffer, length);
 	tmpBuffer[nBytes] = '\0';
