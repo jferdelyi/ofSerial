@@ -19,14 +19,17 @@
 
 #include "ofSerial.h"
 
+#if defined( TARGET_OSX )
+	#include <getopt.h>
+#endif
+
 #if defined( TARGET_OSX ) || defined( TARGET_LINUX )
 	#include <sys/ioctl.h>
-	#include <getopt.h>
 	#include <dirent.h>
 	#include <fcntl.h>
 #endif
 
-#ifdef TARGET_LINUX
+#if defined( TARGET_LINUX )
 	#include <linux/serial.h>
 	#include <unistd.h>
 	#include <cstring>

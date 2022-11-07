@@ -57,11 +57,13 @@
 
 #if defined( TARGET_OSX ) || defined( TARGET_LINUX ) || defined (TARGET_ANDROID)
 	#include <termios.h>
-	#include <climits>
 #else
 	#include <Windows.h>
 	#include <setupapi.h>
 	#define MAX_SERIAL_PORTS 256
+#endif
+#if defined(TARGET_OSX)
+	#include <climits>
 #endif
 
 #include <vector>
