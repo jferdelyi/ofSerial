@@ -171,7 +171,7 @@ static bool isDeviceArduino( ofSerialDeviceInfo & A ){
 #endif
 
 //----------------------------------------------------------------
-void ofSerial::buildDeviceList(){
+void ofSerial::buildDeviceList() {
 	deviceType = "serial";
 	devices.clear();
 	vector <string> prefixMatch;
@@ -228,8 +228,7 @@ void ofSerial::buildDeviceList(){
 	#ifdef TARGET_WIN32
 
 		enumerateWin32Ports();
-		std::cout << "found " << nPorts << " devices" << std::endl;
-		for(int i = 0; i < nPorts; i++){
+		for(int i = 0; i < nPorts; i++) {
 			//NOTE: we give the short port name for both as that is what the user should pass and the short name is more friendly
 			devices.push_back(ofSerialDeviceInfo(string(portNamesShort[i]), string(portNamesFriendly[i]), i));
 		}
@@ -300,7 +299,7 @@ bool ofSerial::setup(int deviceNumber, int baud){
 	if(deviceNumber < (int)devices.size()){
 		return setup(devices[deviceNumber].devicePath, baud);
 	} else {
-		std::cerr << "couldn't find device " << deviceNumber << ", only " << devices.size() << " devices found" << std::endl;
+		std::cerr << "Couldn't find device " << deviceNumber << ", only " << devices.size() << " devices found" << std::endl;
 		return false;
 	}
 
@@ -317,10 +316,9 @@ bool ofSerial::setup(string portName, int baud){
 			portName = "/dev/" + portName;
 		}
 
-		std::cout << "opening " << portName << " @ " << baud << " bps" << std::endl;
 		fd = open(portName.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
 		if(fd == -1){
-			std::cerr << "unable to open " << portName << std::endl << std::endl;
+			std::cerr << "Unable to open " << portName << std::endl << std::endl;
 			return false;
 		}
 
@@ -441,8 +439,6 @@ bool ofSerial::setup(string portName, int baud){
 		#endif
 
 		bInited = true;
-		std::cout << "opened " << portName << " sucessfully @ " << baud << " bps" << std::endl;
-
 		return true;
 
 	#elif defined( TARGET_WIN32 )
@@ -489,7 +485,6 @@ bool ofSerial::setup(string portName, int baud){
 		if(!SetCommState(hComm, &cfg.dcb)){
 			std::cerr << "setup(): couldn't set comm state: " << cfg.dcb.BaudRate << " bps, xio " << cfg.dcb.fInX << "/" << cfg.dcb.fOutX << std::endl;
 		}
-		//std::cout << "bps=" << cfg.dcb.BaudRate << ", xio=" << cfg.dcb.fInX << "/" << cfg.dcb.fOutX;
 
 		// Set communication timeouts (NT)
 		COMMTIMEOUTS tOut;
@@ -507,7 +502,7 @@ bool ofSerial::setup(string portName, int baud){
 
 	#else
 
-		std::cerr << "not implemented in this platform" << std::endl;
+		std::cerr << "Not implemented in this platform" << std::endl;
 		return false;
 
 	#endif
@@ -569,7 +564,6 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 			 std::cerr << "writeBytes(): couldn't write to port" << std::endl;
 			 return OF_SERIAL_ERROR;
 		}
-		std::cout <<  "wrote " << (int) written << " bytes";
 		return (int)written;
 
 	#else
@@ -608,7 +602,7 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 
 	#else
 
-		std::cerr << "not defined in this platform" << std::endl;
+		std::cerr << "Not defined in this platform" << std::endl;
 		return -1;
 
 	#endif
@@ -622,7 +616,7 @@ long ofSerial::readBytes(char* buffer, size_t length){
 //----------------------------------------------------------------
 long ofSerial::readBytes(std::string& buffer, size_t length) {
 	char* tmpBuffer = new char[length + 1];
-	memset(tmpBuffer, 0, sizeof(char) * length);
+	memset(tmpBuffer, 0, sizeof(char) * (length + 1));
 	const auto& nBytes = readBytes(tmpBuffer, length);
 	tmpBuffer[nBytes] = '\0';
 	buffer = std::string(tmpBuffer);
@@ -668,7 +662,7 @@ int ofSerial::readByte(){
 
 	#else
 
-		std::cerr << "not defined in this platform" << std::endl;
+		std::cerr << "Not defined in this platform" << std::endl;
 		return OF_SERIAL_ERROR;
 
 	#endif

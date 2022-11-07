@@ -9,67 +9,69 @@
 
 using namespace std;
 
-static bool isRunning = true;
-
 // ofSerial standalone example
 int main(int argc, char* argv[]) {
+
 	// Check and get params 
 	if (argc < 3) {
 		cout << "Usage: serial <port> <baudrate>" << endl;
 		return EXIT_FAILURE;
 	}
-	char* port = argv[1];
-	int baudrate = atoi(argv[2]);
+	char* l_port = argv[1];
+	int l_baudrate = atoi(argv[2]);
 
 	// Create and connect serial
 	ofSerial l_serial;
-	bool l_connected = l_serial.setup(port, baudrate);
+	bool l_connected = l_serial.setup(l_port, l_baudrate);
+	if (l_connected) {
+		cout << "CONNECTED" << endl;
+	} else {
+		cerr << "NOT CONNECTED" << endl;
+		return EXIT_FAILURE;
+	}
 
 	// While is running
-	string bytesToProcess;
+	string l_bytes_to_process;
 	cout << endl;
 	l_serial.flush(true, true);
-	while (isRunning) {
+	while (true) {
+
 		// Get and send data
-		string input;
+		string l_input;
 		cout << "SEND DATA (EXIT to quit): ";
-		getline(cin, input); 
-		cout << endl;
-		if (input == "") {
+		getline(cin, l_input); 
+		if (l_input == "") {
 			continue;
-		} else if (input == "EXIT") {
+		} else if (l_input == "EXIT") {
 			break;
 		}
-		l_serial.writeBytes(input);
+		l_serial.writeBytes(l_input);
 
 		// Wait the answer
-		while(!l_serial.available() && isRunning) {
+		while(!l_serial.available()) {
 			this_thread::sleep_for(chrono::milliseconds(100));
-		}
-		
-		if (!isRunning) {
-			break;
 		}
 
 		// Check if there is data to read
-		int bytesToRead = l_serial.available();
+		int l_bytes_to_read = l_serial.available();
 	
 		// Print number of bytes 
-		cout << "RECEIVED " << dec << bytesToRead << " BYTES" << endl;
-		l_serial.readBytes(bytesToProcess, bytesToRead);
+		cout << endl << "RECEIVED " << dec << l_bytes_to_read << " BYTES" << endl;
+		int l_bytes_read = l_serial.readBytes(l_bytes_to_process, l_bytes_to_read);
 
 		// Print hexa data
-		cout << "0x" << hex << uppercase;
-		for (int i = 0; i < bytesToRead; ++i) {
-			cout << ((unsigned short*)bytesToProcess.c_str())[i];
+		cout << hex << uppercase;
+		const char* l_c_str = l_bytes_to_process.c_str();
+		for (int i = 0; i < l_bytes_read; ++i) {
+			cout << "0x" << (unsigned short*)l_c_str[i] << endl;
 		}
 
 		// Print string data 
-		cout << dec << " (" << bytesToProcess << ")" << endl << endl;
+		cout << dec << "(" << l_bytes_to_process << ")" << endl << endl;
 	}
 
 	// Close and return
-	cout << "FINISHED" << endl;
 	l_serial.close();
+	cout << "CLOSED" << endl;
 	return EXIT_SUCCESS;
 }
