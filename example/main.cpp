@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
 		cout << hex << uppercase;
 		const char* l_c_str = l_bytes_to_process.c_str();
 		for (int i = 0; i < l_bytes_read; ++i) {
-			cout << "0x" << static_cast<unsigned short>(l_c_str[i]) << endl;
+			cout << static_cast<unsigned short>(l_c_str[i] & 0x00FF) << " ";
 		}
 
 		// Print string data 
-		cout << dec << "(" << l_bytes_to_process << ")" << endl << endl;
+		cout << dec << "-> " << l_bytes_to_process << endl << endl;
 	}
 
 	// Close and return
