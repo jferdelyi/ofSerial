@@ -62,9 +62,6 @@
 	#include <setupapi.h>
 	#define MAX_SERIAL_PORTS 256
 #endif
-#if defined(TARGET_OSX)
-	#include <climits>
-#endif
 
 #include <vector>
 #include <string>
