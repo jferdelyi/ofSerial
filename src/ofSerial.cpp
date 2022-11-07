@@ -509,29 +509,29 @@ bool ofSerial::setup(string portName, int baud){
 }
 
 //----------------------------------------------------------------
-bool ofSerial::writeBytes(const char singleByte) {
-	return writeBytes((const unsigned char)singleByte);
+bool ofSerial::writeData(const char singleByte) {
+	return writeData((const unsigned char)singleByte);
 }
 
 //----------------------------------------------------------------
-bool ofSerial::writeBytes(const unsigned char singleByte) {
-	return writeBytes(&singleByte, 1) > 0;
+bool ofSerial::writeData(const unsigned char singleByte) {
+	return writeData(&singleByte, 1) > 0;
 }
 
 //----------------------------------------------------------------
-long ofSerial::writeBytes(const char* buffer, size_t length) {
-	return writeBytes((const unsigned char*)buffer, length);
+long ofSerial::writeData(const char* buffer, size_t length) {
+	return writeData((const unsigned char*)buffer, length);
 }
 
 //----------------------------------------------------------------
-long ofSerial::writeBytes(const std::string& buffer) {
-	return writeBytes((const unsigned char*)buffer.c_str(), buffer.size());
+long ofSerial::writeData(const std::string& buffer) {
+	return writeData((const unsigned char*)buffer.c_str(), buffer.size());
 }
 
 //----------------------------------------------------------------
-long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
+long ofSerial::writeData(const unsigned char* buffer, size_t length) {
 	if(!bInited){
-		std::cerr << "writeBytes(): serial not inited" << std::endl;
+		std::cerr << "writeData(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -561,7 +561,7 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 
 		DWORD written;
 		if(!WriteFile(hComm, buffer, length, &written,0)){
-			 std::cerr << "writeBytes(): couldn't write to port" << std::endl;
+			 std::cerr << "writeData(): couldn't write to port" << std::endl;
 			 return OF_SERIAL_ERROR;
 		}
 		return (int)written;
@@ -574,9 +574,9 @@ long ofSerial::writeBytes(const unsigned char* buffer, size_t length) {
 }
 
 //----------------------------------------------------------------
-long ofSerial::readBytes(unsigned char* buffer, size_t length){
+long ofSerial::readData(unsigned char* buffer, size_t length){
 	if (!bInited){
-		std::cerr << "readBytes(): serial not inited" << std::endl;
+		std::cerr << "readData(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -586,7 +586,7 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 		if(nRead < 0){
 			if ( errno == EAGAIN )
 				return OF_SERIAL_NO_DATA;
-			std::cerr << "readBytes(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
+			std::cerr << "readData(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 		return nRead;
@@ -595,7 +595,7 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 
 		DWORD nRead = 0;
 		if (!ReadFile(hComm, buffer, length, &nRead, 0)){
-			std::cerr << "readBytes(): couldn't read from port" << std::endl;
+			std::cerr << "readData(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 		return (int)nRead;
@@ -609,15 +609,15 @@ long ofSerial::readBytes(unsigned char* buffer, size_t length){
 }
 
 //----------------------------------------------------------------
-long ofSerial::readBytes(char* buffer, size_t length){
-	return readBytes(reinterpret_cast<unsigned char*>(buffer), length);
+long ofSerial::readData(char* buffer, size_t length){
+	return readData(reinterpret_cast<unsigned char*>(buffer), length);
 }
 
 //----------------------------------------------------------------
-long ofSerial::readBytes(std::string& buffer, size_t length) {
+long ofSerial::readData(std::string& buffer, size_t length) {
 	char* tmpBuffer = new char[length + 1];
 	memset(tmpBuffer, 0, sizeof(char) * (length + 1));
-	const auto& nBytes = readBytes(tmpBuffer, length);
+	const auto& nBytes = readData(tmpBuffer, length);
 	tmpBuffer[nBytes] = '\0';
 	buffer = std::string(tmpBuffer);
 	delete[] tmpBuffer;
@@ -625,9 +625,9 @@ long ofSerial::readBytes(std::string& buffer, size_t length) {
 }
 
 //----------------------------------------------------------------
-int ofSerial::readByte(){
+int ofSerial::readData(){
 	if(!bInited){
-		std::cerr << "readByte(): serial not inited" << std::endl;
+		std::cerr << "readData(): serial not inited" << std::endl;
 		return OF_SERIAL_ERROR;
 	}
 
@@ -640,7 +640,7 @@ int ofSerial::readByte(){
 			if ( errno == EAGAIN ){
 				return OF_SERIAL_NO_DATA;
 			}
-			std::cerr << "readByte(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
+			std::cerr << "readData(): couldn't read from port: " << errno << " " << strerror(errno) << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 
@@ -652,7 +652,7 @@ int ofSerial::readByte(){
 
 		DWORD nRead;
 		if(!ReadFile(hComm, &tmpByte, 1, &nRead, 0)){
-			std::cerr << "readByte(): couldn't read from port" << std::endl;
+			std::cerr << "readData(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
 		}
 	

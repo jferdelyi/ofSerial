@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 		} else if (l_input == "EXIT") {
 			break;
 		}
-		l_serial.writeBytes(l_input);
+		l_serial.writeData(l_input);
 
 		// Wait the answer
 		while(!l_serial.available()) {
@@ -57,13 +57,13 @@ int main(int argc, char* argv[]) {
 	
 		// Print number of bytes 
 		cout << endl << "RECEIVED " << dec << l_bytes_to_read << " BYTES" << endl;
-		int l_bytes_read = l_serial.readBytes(l_bytes_to_process, l_bytes_to_read);
+		int l_bytes_read = l_serial.readData(l_bytes_to_process, l_bytes_to_read);
 
 		// Print hexa data
 		cout << hex << uppercase;
 		const char* l_c_str = l_bytes_to_process.c_str();
 		for (int i = 0; i < l_bytes_read; ++i) {
-			cout << "0x" << (unsigned short*)l_c_str[i] << endl;
+			cout << "0x" << static_cast<unsigned short>(l_c_str[i]) << endl;
 		}
 
 		// Print string data 

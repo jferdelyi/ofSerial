@@ -205,7 +205,7 @@ public:
 	///
 	/// ~~~~{.cpp}
 	/// if(device.available() > 8) {
-	///	 device.readBytes(buffer, 8);
+	///	 device.readData(buffer, 8);
 	/// }
 	/// ~~~~
 	///
@@ -236,7 +236,7 @@ public:
 	///		 // try to read - note offset into the bytes[] array, this is so
 	///		 // that we don't overwrite the bytes we already have
 	///		 int bytesArrayOffset = bytesRequired - bytesRemaining;
-	///		 int result = serial.readBytes( &bytes[bytesArrayOffset], bytesRemaining );
+	///		 int result = serial.readData( &bytes[bytesArrayOffset], bytesRemaining );
 	///
 	///		 // check for error code
 	///		 if ( result == OF_SERIAL_ERROR ){
@@ -252,13 +252,31 @@ public:
 	///	 }
 	/// }
 	/// ~~~~
+	/// \returns The number of byte readed. If there is no data it will return
+	/// `OF_SERIAL_NO_DATA`, and on error it returns `OF_SERIAL_ERROR`
+	///
+	/// Single byte
+	/// ~~~~{.cpp}
+	/// int myByte = mySerial.readData();
+	///
+	/// if ( myByte == OF_SERIAL_NO_DATA ){
+	///	 printf("no data was read");
+	/// } else if ( myByte == OF_SERIAL_ERROR ){
+	///	 printf("an error occurred");
+	/// } else {
+	///	 printf("myByte is %d", myByte);
+	/// }
+	/// \returns The single byte as integer. If there is no data it will return
+	/// `OF_SERIAL_NO_DATA`, and on error it returns `OF_SERIAL_ERROR`
+	/// ~~~~
 	///
 	/// Be aware that the type of your buffer can only be unsigned char. If you're
 	/// trying to receieve ints or signed chars over a serial connection you'll
 	/// need to do some bit manipulation to correctly interpret that values.
-	long readBytes(unsigned char* buffer, size_t length);
-	long readBytes(char* buffer, size_t length);
-	long readBytes(std::string& buffer, size_t length);
+	long readData(unsigned char* buffer, size_t length);
+	long readData(char* buffer, size_t length);
+	long readData(std::string& buffer, size_t length);
+	int readData();
 
 	/// \brief Reads and returns a single byte from the requested device.
 	///
@@ -266,7 +284,7 @@ public:
 	/// ofSerial mySerial;
 	/// mySerial.setup(0, 57600);
 	///
-	/// int myByte = mySerial.readByte();
+	/// int myByte = mySerial.readData();
 	///
 	/// if ( myByte == OF_SERIAL_NO_DATA ){
 	///	 printf("no data was read");
@@ -279,10 +297,9 @@ public:
 	///
 	/// \returns The single byte as integer. If there is no data it will return
 	/// `OF_SERIAL_NO_DATA`, and on error it returns `OF_SERIAL_ERROR`
-	int readByte();
 
 	/// \}
-	/// \name writeBytes Data
+	/// \name writeData Data
 	/// \{
 
 	/// \brief This writes bytes into the serial buffer from the buffer pointer passed in
@@ -292,17 +309,17 @@ public:
 	/// char buf_data[2] = {0x31, 0xDA};
 	/// unsigned char data = 0x39;
 	///
-	/// device.writeBytes(data);
-	/// device.writeBytes('o');
-	/// device.writeBytes("of!");
-	/// device.writeBytes(&buf_str[0], 3);
-	/// device.writeBytes(&buf_data[0], 2);
+	/// device.writeData(data);
+	/// device.writeData('o');
+	/// device.writeData("of!");
+	/// device.writeData(&buf_str[0], 3);
+	/// device.writeData(&buf_data[0], 2);
 	/// ~~~~
-	long writeBytes(const std::string& buffer);
-	bool writeBytes(const char singleByte);
-	bool writeBytes(const unsigned char singleByte);
-	long writeBytes(const char* buffer, size_t length);
-	long writeBytes(const unsigned char* buffer, size_t length);
+	long writeData(const std::string& buffer);
+	bool writeData(const char singleByte);
+	bool writeData(const unsigned char singleByte);
+	long writeData(const char* buffer, size_t length);
+	long writeData(const unsigned char* buffer, size_t length);
 
 	/// \}
 	/// \name Clear Data
