@@ -33,6 +33,8 @@
 
 # Build
 build/*
+debug/*
+release/*
 
 # macOS
 .DS_Store
