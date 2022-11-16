@@ -42,6 +42,10 @@
 #define OF_SERIAL_NO_DATA 	-2
 #define OF_SERIAL_ERROR		-1
 
+#define OF_SERIAL_PARITY_N	0
+#define OF_SERIAL_PARITY_E	1
+#define OF_SERIAL_PARITY_O	2
+
 /// \brief Describes a Serial device, including ID, name and path.
 class ofSerialDeviceInfo{
 	friend class ofSerial;
@@ -156,15 +160,6 @@ public:
 	/// \name Serial Connection
 	/// \{
 
-	/// \brief Attempts to setup the first available device at a baud rate of 9600.
-	/// ~~~~{.cpp}
-	/// ofSerial mySerial;
-	/// if( mySerial.setup() ){
-	///	 ofLog("serial is setup!");
-	/// }
-	/// ~~~~
-	bool setup();
-
 	/// \brief Opens the serial port, with the given name and baud rate.
 	///
 	/// On OSX and Linux, it might look like:
@@ -178,7 +173,7 @@ public:
 	/// ofSerial mySerial;
 	/// mySerial.setup("COM4", 57600);
 	/// ~~~~
-	bool setup(std::string portName, int baudrate);
+	bool setup(std::string portName, int baudrate = 9600, int data = 8, int parity = OF_SERIAL_PARITY_N, int stop = 1);
 
 	/// \brief Opens the serial port based on the order in which is listed and
 	/// sets the baud rate.
@@ -188,7 +183,7 @@ public:
 	/// ofSerial mySerial;
 	/// mySerial.setup(0, 9600);
 	/// ~~~~
-	bool setup(int deviceNumber, int baudrate);
+	bool setup(int deviceNumber = 0, int baudrate = 9600, int data = 8, int parity = OF_SERIAL_PARITY_N, int stop = 1);
 
 	bool isInitialized() const;
 
@@ -277,26 +272,6 @@ public:
 	long readData(char* buffer, size_t length);
 	long readData(std::string& buffer, size_t length);
 	int readData();
-
-	/// \brief Reads and returns a single byte from the requested device.
-	///
-	/// ~~~~{.cpp}
-	/// ofSerial mySerial;
-	/// mySerial.setup(0, 57600);
-	///
-	/// int myByte = mySerial.readData();
-	///
-	/// if ( myByte == OF_SERIAL_NO_DATA ){
-	///	 printf("no data was read");
-	/// } else if ( myByte == OF_SERIAL_ERROR ){
-	///	 printf("an error occurred");
-	/// } else {
-	///	 printf("myByte is %d", myByte);
-	/// }
-	/// ~~~~
-	///
-	/// \returns The single byte as integer. If there is no data it will return
-	/// `OF_SERIAL_NO_DATA`, and on error it returns `OF_SERIAL_ERROR`
 
 	/// \}
 	/// \name writeData Data

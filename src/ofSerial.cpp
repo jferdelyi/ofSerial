@@ -288,15 +288,10 @@ void ofSerial::close(){
 }
 
 //----------------------------------------------------------------
-bool ofSerial::setup(){
-	return setup(0, 9600); // the first one, at 9600 is a good choice...
-}
-
-//----------------------------------------------------------------
-bool ofSerial::setup(int deviceNumber, int baud){
+bool ofSerial::setup(int deviceNumber, int baud, int data, int parity, int stop) {
 	buildDeviceList();
 	if(deviceNumber < (int)devices.size()){
-		return setup(devices[deviceNumber].devicePath, baud);
+		return setup(devices[deviceNumber].devicePath, baud, data, parity, stop);
 	} else {
 		std::cerr << "Couldn't find device " << deviceNumber << ", only " << devices.size() << " devices found" << std::endl;
 		return false;
@@ -305,7 +300,7 @@ bool ofSerial::setup(int deviceNumber, int baud){
 }
 
 //----------------------------------------------------------------
-bool ofSerial::setup(string portName, int baud){
+bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) {
 	bInited = false;
 
 	#if defined( TARGET_OSX ) || defined( TARGET_LINUX )
@@ -387,12 +382,43 @@ bool ofSerial::setup(string portName, int baud){
 				std::cerr << "setup(): cannot set " << baud << " bps, setting to 9600" << std::endl;
 				break;
 		}
+		switch (data) {
+			case 5:
+				options.c_cflag |= CS5; // 5 bits per byte
+				break;
+			case 6:
+				options.c_cflag |= CS6; // 6 bits per byte
+				break;
+			case 7:
+				options.c_cflag |= CS7; // 7 bits per byte
+				break;
+			case 8:
+			default:
+				options.c_cflag |= CS8; // 8 bits per byte (most common)
+		}
+		switch (parity) {
+			case OF_SERIAL_PARITY_E:
+				options.c_cflag |= PARENB; // Enable parity bit
+				options.c_cflag &= ~PARODD; // Even parity (disable odd bit)
+				break;
+			case OF_SERIAL_PARITY_O:
+				options.c_cflag |= PARENB; // Enable parity bit
+				options.c_cflag |= PARODD; // Odd parity
+				break;
+			case OF_SERIAL_PARITY_N:
+			default:
+				options.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
+		}
+		switch (stop) {
+			case 2:
+				options.c_cflag |= CSTOPB; // Enable stop field, two stop bit used in communication
+				break;
+			case 1:
+			default:
+				options.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
+		}
 
-		options.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
-		options.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
 		options.c_cflag &= ~CSIZE; // Clear all bits that set the data size 
-		options.c_cflag |= CS8; // 8 bits per byte (most common)
-
 		#if defined( TARGET_LINUX )
 			options.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
 		#endif
@@ -471,8 +497,38 @@ bool ofSerial::setup(string portName, int baud){
 
 		cfgSize = sizeof(cfg);
 		GetCommConfig(hComm, &cfg, &cfgSize);
-		int bps = baud;
-		swprintf(buf, L"baud=%d parity=N data=8 stop=1", bps);
+
+		// Default parity=N, data=8, stop=1
+		int l_baud = baud;
+		char l_parity = 'N';
+		int l_data = 8;
+		int l_stop = 1;
+		switch (data) {
+			case 5:
+				l_data = 5; // 5 bits per byte
+				break;
+			case 6:
+				l_data = 6; // 6 bits per byte
+				break;
+			case 7:
+				l_data = 7; // 7 bits per byte
+				break;
+		}
+		switch (l_parity) {
+			case OF_SERIAL_PARITY_E:
+				parity = 'E' // Even parity
+				break;
+			case OF_SERIAL_PARITY_O:
+				parity = 'O' // Odd parity
+				break;
+		}
+		switch (stop) {
+			case 2:
+				l_stop = 2; // Two stop bit used in communication
+				break;
+		}
+
+		swprintf(buf, L"baud=%d parity=%d data=%d stop=%d", l_baud, l_parity, l_data, l_stop);
 
 		if(!BuildCommDCBW(buf, &cfg.dcb)){
 			std::cerr << "setup(): unable to build comm dcb, (" << buf << ")" << std::endl;
