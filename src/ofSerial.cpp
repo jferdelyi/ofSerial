@@ -247,16 +247,6 @@ void ofSerial::buildDeviceList() {
 	bHaveEnumeratedDevices = true;
 }
 
-
-//----------------------------------------------------------------
-void ofSerial::listDevices(){
-	buildDeviceList();
-
-	for(auto & device: devices){
-		std::cout << "[" << device.getDeviceID() << "] = "<< device.getDeviceName().c_str() << std::endl;
-	}
-}
-
 //----------------------------------------------------------------
 vector <ofSerialDeviceInfo> ofSerial::getDeviceList(){
 	buildDeviceList();
@@ -516,10 +506,10 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 		}
 		switch (l_parity) {
 			case OF_SERIAL_PARITY_E:
-				parity = 'E' // Even parity
+				parity = 'E'; // Even parity
 				break;
 			case OF_SERIAL_PARITY_O:
-				parity = 'O' // Odd parity
+				parity = 'O'; // Odd parity
 				break;
 		}
 		switch (stop) {
