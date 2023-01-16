@@ -13,15 +13,19 @@ using namespace std;
 int main(int argc, char* argv[]) {
 
 	// Check and get params 
+	ofSerial l_serial;
 	if (argc < 3) {
-		cout << "Usage: serial <port> <baudrate>" << endl;
+		cout << "Usage: serial <port> <baudrate>" << endl << endl;
+		cout << "List of serial ports detected:" << endl;
+		for (auto& l_port : l_serial.getDeviceList()) {
+			cout << "\t- " << l_port.getDeviceName() << endl;
+		}
 		return EXIT_FAILURE;
 	}
 	char* l_port = argv[1];
 	int l_baudrate = atoi(argv[2]);
 
-	// Create and connect serial
-	ofSerial l_serial;
+	// Setup and connect serial
 	bool l_connected = l_serial.setup(l_port, l_baudrate);
 	if (l_connected) {
 		cout << "CONNECTED" << endl;
@@ -33,7 +37,6 @@ int main(int argc, char* argv[]) {
 	// While is running
 	string l_bytes_to_process;
 	cout << endl;
-	l_serial.flush(true, true);
 	while (true) {
 
 		// Get and send data
@@ -45,6 +48,7 @@ int main(int argc, char* argv[]) {
 		} else if (l_input == "EXIT") {
 			break;
 		}
+		l_serial.flush(true, true);
 		l_serial.writeData(l_input);
 
 		// Wait the answer
