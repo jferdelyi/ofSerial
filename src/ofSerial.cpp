@@ -39,7 +39,7 @@
 #endif
 
 #include <iostream>
-
+#include <sstream>
 using std::vector;
 using std::string;
 
@@ -104,8 +104,8 @@ void ofSerial::enumerateWin32Ports(){
 			}
 			i++;
 		}
+		SetupDiDestroyDeviceInfoList(hDevInfo);
 	}
-	SetupDiDestroyDeviceInfoList(hDevInfo);
 
 	bPortsEnumerated = false;
 }
@@ -121,7 +121,8 @@ ofSerial::ofSerial(){
 
 		nPorts = 0;
 		bPortsEnumerated = false;
-
+		hComm = nullptr;
+		oldTimeout = { 0 };
 		portNamesShort = new char * [MAX_SERIAL_PORTS];
 		portNamesFriendly = new char * [MAX_SERIAL_PORTS];
 		for(int i = 0; i < MAX_SERIAL_PORTS; i++){
@@ -458,7 +459,7 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 
 	#elif defined( TARGET_WIN32 )
 
-		char pn[sizeof(portName)];
+		char pn[sizeof(portName)] = { '\0' };
 		int num;
 		if(sscanf(portName.c_str(), "COM%d", &num) == 1){
 			// Microsoft KB115831 a.k.a if COM > COM9 you have to use a different
@@ -470,9 +471,8 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 
 		// open the serial port:
 		// "COM4", etc...
-
-		hComm = CreateFileA(pn, GENERIC_READ|GENERIC_WRITE, 0, 0,
-							OPEN_EXISTING, 0, 0);
+		pn[sizeof(portName) - 1] = '\0';
+		hComm = CreateFileA(pn, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
 
 		if(hComm == INVALID_HANDLE_VALUE){
 			std::cerr << "setup(): unable to open " << portName << std::endl;
@@ -616,6 +616,27 @@ long ofSerial::writeData(const unsigned char* buffer, size_t length) {
 		return 0;
 
 	#endif
+}
+
+//----------------------------------------------------------------
+std::string ofSerial::readStringUntil(const char delimiter, const int timeout) {
+	std::stringstream l_data;
+	const clock_t l_begin_time = clock();
+	while (true) {
+		if ((static_cast<float>(clock() - l_begin_time) / CLOCKS_PER_SEC) > (timeout / 1000.0)) {
+			return l_data.str();
+		}
+		if (available()) {
+			while (available()) {
+				char l_byte = readData();
+				if (l_byte == delimiter) {
+					return l_data.str();
+				}
+				l_data << l_byte;
+			}
+		}
+	}
+	return l_data.str();
 }
 
 //----------------------------------------------------------------
