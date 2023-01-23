@@ -259,7 +259,7 @@ public:
 	/// Be aware that the type of your buffer can only be unsigned char. If you're
 	/// trying to receieve ints or signed chars over a serial connection you'll
 	/// need to do some bit manipulation to correctly interpret that values.
-	std::string ofSerial::readStringUntil(const char delimiter, const int timeout = 1000);
+	std::string readStringUntil(const char delimiter, const int timeout = 1000);
 	long readData(unsigned char* buffer, size_t length);
 	long readData(char* buffer, size_t length);
 	long readData(std::string& buffer, size_t length);
