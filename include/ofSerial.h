@@ -43,8 +43,8 @@
 #define OF_SERIAL_ERROR		-1
 
 #define OF_SERIAL_PARITY_N	0
-#define OF_SERIAL_PARITY_E	1
-#define OF_SERIAL_PARITY_O	2
+#define OF_SERIAL_PARITY_O	1
+#define OF_SERIAL_PARITY_E	2
 
 /// \brief Describes a Serial device, including ID, name and path.
 class ofSerialDeviceInfo{

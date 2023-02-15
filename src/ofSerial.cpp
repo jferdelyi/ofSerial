@@ -459,89 +459,88 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 
 	#elif defined( TARGET_WIN32 )
 
+		// Get port
 		char pn[sizeof(portName)] = { '\0' };
 		int num;
-		if(sscanf(portName.c_str(), "COM%d", &num) == 1){
-			// Microsoft KB115831 a.k.a if COM > COM9 you have to use a different
-			// syntax
+		if (sscanf(portName.c_str(), "COM%d", &num) == 1) {
+			// Microsoft KB115831 a.k.a if COM > COM9 you have to use a different syntax
 			sprintf(pn, "\\\\.\\COM%d", num);
 		} else {
-			strncpy(pn, (const char *)portName.c_str(), sizeof(portName)-1);
+			strncpy(pn, (const char*)portName.c_str(), sizeof(portName) - 1);
 		}
 
-		// open the serial port:
-		// "COM4", etc...
+		// Open serial port:
 		pn[sizeof(portName) - 1] = '\0';
-		hComm = CreateFileA(pn, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
-
-		if(hComm == INVALID_HANDLE_VALUE){
+		hComm = CreateFile(pn, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hComm == INVALID_HANDLE_VALUE) {
 			std::cerr << "setup(): unable to open " << portName << std::endl;
 			return false;
 		}
 
-
-		// now try the settings:
-		COMMCONFIG cfg;
-		DWORD cfgSize;
-		WCHAR buf[80];
-
-		cfgSize = sizeof(cfg);
-		GetCommConfig(hComm, &cfg, &cfgSize);
+		// Set timeouts
+		COMMTIMEOUTS CommTimeOuts;
+		GetCommTimeouts(hComm, &CommTimeOuts);
+		CommTimeOuts.ReadIntervalTimeout = MAXDWORD;
+		CommTimeOuts.ReadTotalTimeoutMultiplier = 0;
+		CommTimeOuts.ReadTotalTimeoutConstant = 0;
+		SetCommTimeouts(hComm, &CommTimeOuts);
 
 		// Default parity=N, data=8, stop=1
-		int l_baud = baud;
-		char l_parity = 'N';
+		DCB dcb;
+		dcb.DCBlength = sizeof(DCB);
+		GetCommState(hComm, &dcb);
+		int l_baud = 9600;
+		char l_parity = NOPARITY;
 		int l_data = 8;
-		int l_stop = 1;
+		int l_stop = ONESTOPBIT;
+		switch (baud) {
+			case 300:
+			case 1200:
+			case 2400:
+			case 4800:
+			case 9600:
+			case 14400:
+			case 19200:
+			case 28800:
+			case 38400:
+			case 57600:
+			case 115200:
+			case 230400:
+			case 12000000:
+				l_baud = baud;
+				break;
+		}
 		switch (data) {
 			case 5:
-				l_data = 5; // 5 bits per byte
-				break;
 			case 6:
-				l_data = 6; // 6 bits per byte
-				break;
 			case 7:
-				l_data = 7; // 7 bits per byte
+				l_data = data;
 				break;
 		}
 		switch (l_parity) {
 			case OF_SERIAL_PARITY_E:
-				parity = 'E'; // Even parity
+				parity = EVENPARITY; // Even parity
 				break;
 			case OF_SERIAL_PARITY_O:
-				parity = 'O'; // Odd parity
+				parity = ODDPARITY; // Odd parity
 				break;
 		}
 		switch (stop) {
 			case 2:
-				l_stop = 2; // Two stop bit used in communication
+				l_stop = TWOSTOPBITS; // Two stop bit used in communication
 				break;
 		}
+		dcb.BaudRate = l_baud;
+		dcb.ByteSize = l_data;
+		dcb.StopBits = l_stop;
+		dcb.Parity = l_parity;
+		dcb.fDtrControl = DTR_CONTROL_ENABLE;
+		SetCommState(hComm, &dcb);
 
-		swprintf(buf, L"baud=%d parity=%d data=%d stop=%d", l_baud, l_parity, l_data, l_stop);
+		// Purge RX and TX
+		PurgeComm(hComm, PURGE_RXCLEAR | PURGE_TXCLEAR);
 
-		if(!BuildCommDCBW(buf, &cfg.dcb)){
-			std::cerr << "setup(): unable to build comm dcb, (" << buf << ")" << std::endl;
-		}
-
-		// Set baudrate and bits etc.
-		// Note that BuildCommDCB() clears XON/XOFF and hardware control by default
-
-		if(!SetCommState(hComm, &cfg.dcb)){
-			std::cerr << "setup(): couldn't set comm state: " << cfg.dcb.BaudRate << " bps, xio " << cfg.dcb.fInX << "/" << cfg.dcb.fOutX << std::endl;
-		}
-
-		// Set communication timeouts (NT)
-		COMMTIMEOUTS tOut;
-		GetCommTimeouts(hComm, &oldTimeout);
-		tOut = oldTimeout;
-		// Make timeout so that:
-		// - return immediately with buffered characters
-		tOut.ReadIntervalTimeout = MAXDWORD;
-		tOut.ReadTotalTimeoutMultiplier = 0;
-		tOut.ReadTotalTimeoutConstant = 0;
-		SetCommTimeouts(hComm, &tOut);
-
+		// OK
 		bInited = true;
 		return true;
 
