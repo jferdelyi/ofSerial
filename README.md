@@ -2,7 +2,7 @@
 
 A standalone version of openFrameworks communication/serial (https://github.com/openframeworks/openFrameworks).
 
-The library can be compiled for Windows, Linux and macOS as a static or shared library (note that under Windows the static version is required for the shared version, I don't know exactly why. I think it is better to use the static library).
+The library can be compiled for Windows, Linux and macOS as a static or shared library.
 
 ```shell
 mkdir build
