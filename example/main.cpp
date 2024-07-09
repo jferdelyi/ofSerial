@@ -48,11 +48,11 @@ int main(int argc, char* argv[]) {
 		} else if (l_input == "EXIT") {
 			break;
 		}
-		l_serial.flush(true, true);
+		l_input += "\n";
 		l_serial.writeData(l_input);
 
 		// Wait the answer
-		while(!l_serial.available()) {
+		while (!l_serial.available()) {
 			this_thread::sleep_for(chrono::milliseconds(100));
 		}
 

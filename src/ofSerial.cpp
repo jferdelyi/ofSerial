@@ -262,6 +262,8 @@ void ofSerial::close(){
 		if(bInited){
 			SetCommTimeouts(hComm, &oldTimeout);
 			CloseHandle(hComm);
+			CloseHandle(osWriter.hEvent);
+			CloseHandle(osReader.hEvent);
 			hComm = INVALID_HANDLE_VALUE;
 			bInited = false;
 		}
@@ -471,28 +473,24 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 
 		// Open serial port:
 		pn[sizeof(portName) - 1] = '\0';
-		hComm = CreateFile(pn, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		hComm = CreateFile(pn, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 		if (hComm == INVALID_HANDLE_VALUE) {
 			std::cerr << "setup(): unable to open " << portName << std::endl;
 			return false;
 		}
 
-		// Set timeouts
-		COMMTIMEOUTS CommTimeOuts;
-		GetCommTimeouts(hComm, &CommTimeOuts);
-		CommTimeOuts.ReadIntervalTimeout = MAXDWORD;
-		CommTimeOuts.ReadTotalTimeoutMultiplier = 0;
-		CommTimeOuts.ReadTotalTimeoutConstant = 0;
-		SetCommTimeouts(hComm, &CommTimeOuts);
-
 		// Default parity=N, data=8, stop=1
-		DCB dcb;
-		dcb.DCBlength = sizeof(DCB);
-		GetCommState(hComm, &dcb);
-		int l_baud = 9600;
-		char l_parity = NOPARITY;
+		DCB dcbSerialParams = { 0 };
+		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+		if (!GetCommState(hComm, &dcbSerialParams)) {
+			std::cerr << "setup(): unable to get port status " << portName << std::endl;
+			CloseHandle(hComm);
+			return false;
+		}
+		int l_baud = CBR_9600;
 		int l_data = 8;
 		int l_stop = ONESTOPBIT;
+		char l_parity = NOPARITY;
 		switch (baud) {
 			case 300:
 			case 1200:
@@ -530,15 +528,47 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 				l_stop = TWOSTOPBITS; // Two stop bit used in communication
 				break;
 		}
-		dcb.BaudRate = l_baud;
-		dcb.ByteSize = l_data;
-		dcb.StopBits = l_stop;
-		dcb.Parity = l_parity;
-		dcb.fDtrControl = DTR_CONTROL_ENABLE;
-		SetCommState(hComm, &dcb);
+		dcbSerialParams.BaudRate = l_baud;
+		dcbSerialParams.ByteSize = l_data;
+		dcbSerialParams.StopBits = l_stop;
+		dcbSerialParams.Parity = l_parity;
+		//dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
+		if (!SetCommState(hComm, &dcbSerialParams)) {
+			std::cerr << "Erreur à la configuration du port COM" << std::endl;
+			CloseHandle(hComm);
+			return false;
+		}
+
+		// Set timeouts
+		COMMTIMEOUTS timeouts = { 0 };
+		timeouts.ReadIntervalTimeout = MAXDWORD;  // Prevent delay between chars
+		timeouts.ReadTotalTimeoutConstant = 0;
+		timeouts.ReadTotalTimeoutMultiplier = 0;
+		timeouts.WriteTotalTimeoutConstant = 0;
+		timeouts.WriteTotalTimeoutMultiplier = 0;
+		if (!SetCommTimeouts(hComm, &timeouts)) {
+			std::cerr << "setup(): error setting timeouts" << std::endl;
+			CloseHandle(hComm);
+			return false;
+		}
+
+
+		// Set event handlers
+		osWriter.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		if (osWriter.hEvent == NULL) {
+			std::cerr << "setup(): error while creating writing event" << std::endl;
+			CloseHandle(hComm);
+			return false;
+		}
+		osReader.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		if (osReader.hEvent == NULL) {
+			std::cerr << "setup(): error while creating reading event" << std::endl;
+			CloseHandle(hComm);
+			return false;
+		}
 
 		// Purge RX and TX
-		PurgeComm(hComm, PURGE_RXCLEAR | PURGE_TXCLEAR);
+		//PurgeComm(hComm, PURGE_RXCLEAR | PURGE_TXCLEAR);
 
 		// OK
 		bInited = true;
@@ -604,9 +634,27 @@ long ofSerial::writeData(const unsigned char* buffer, size_t length) {
 	#elif defined(TARGET_WIN32)
 
 		DWORD written;
-		if(!WriteFile(hComm, buffer, length, &written,0)){
+		/*if(!WriteFile(hComm, buffer, length, &written,0)){
 			 std::cerr << "writeData(): couldn't write to port" << std::endl;
 			 return OF_SERIAL_ERROR;
+		}*/
+
+		if (!WriteFile(hComm, buffer, length, &written, &osWriter)) {
+			if (GetLastError() != ERROR_IO_PENDING) {
+				std::cerr << "writeData(): couldn't write to port" << std::endl;
+				return OF_SERIAL_ERROR;
+			}
+
+			DWORD waitRes = WaitForSingleObject(osWriter.hEvent, INFINITE);
+			if (waitRes == WAIT_OBJECT_0) {
+				if (!GetOverlappedResult(hComm, &osWriter, &written, FALSE)) {
+					std::cerr << "writeData(): GetOverlappedResult error during write" << std::endl;
+					return OF_SERIAL_ERROR;
+				}
+			} else {
+				std::cerr << "writeData(): WaitForSingleObject error during write" << std::endl;
+				return OF_SERIAL_ERROR;
+			}
 		}
 		return (int)written;
 
@@ -659,10 +707,25 @@ long ofSerial::readData(unsigned char* buffer, size_t length){
 	#elif defined( TARGET_WIN32 )
 
 		DWORD nRead = 0;
-		if (!ReadFile(hComm, buffer, length, &nRead, 0)){
+		/*if (!ReadFile(hComm, buffer, length, &nRead, 0)) {
 			std::cerr << "readData(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
+		}*/
+
+		if (!ReadFile(hComm, buffer, length, &nRead, &osReader)) {
+			if (GetLastError() != ERROR_IO_PENDING) {
+				std::cerr << "readData(): couldn't read from port" << std::endl;
+				return OF_SERIAL_ERROR;
+			} else {
+				WaitForSingleObject(osReader.hEvent, INFINITE);
+				if (GetOverlappedResult(hComm, &osReader, &nRead, FALSE)) {
+					buffer[nRead] = '\0';
+				}
+			}
+		} else {
+			buffer[nRead] = '\0';
 		}
+
 		return (int)nRead;
 
 	#else
@@ -683,7 +746,7 @@ long ofSerial::readData(std::string& buffer, size_t length) {
 	char* tmpBuffer = new char[length + 1];
 	memset(tmpBuffer, 0, sizeof(char) * (length + 1));
 	const auto& nBytes = readData(tmpBuffer, length);
-	tmpBuffer[nBytes] = '\0';
+	//tmpBuffer[nBytes] = '\0';
 	buffer = std::string(tmpBuffer);
 	delete[] tmpBuffer;
 	return nBytes;
@@ -716,9 +779,19 @@ int ofSerial::readData(){
 	#elif defined( TARGET_WIN32 )
 
 		DWORD nRead;
-		if(!ReadFile(hComm, &tmpByte, 1, &nRead, 0)){
+		/*if (!ReadFile(hComm, &tmpByte, 1, &nRead, 0)) {
 			std::cerr << "readData(): couldn't read from port" << std::endl;
 			return OF_SERIAL_ERROR;
+		}*/
+
+		if (!ReadFile(hComm, &tmpByte, 1, &nRead, &osReader)) {
+			if (GetLastError() != ERROR_IO_PENDING) {
+				std::cerr << "readData(): couldn't read from port" << std::endl;
+				return OF_SERIAL_ERROR;
+			} else {
+				WaitForSingleObject(osReader.hEvent, INFINITE);
+				GetOverlappedResult(hComm, &osReader, &nRead, FALSE);
+			}
 		}
 	
 		if(nRead == 0){

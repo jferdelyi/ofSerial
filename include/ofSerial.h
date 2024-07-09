@@ -31,6 +31,7 @@
 	#include <termios.h>
 #else
 	#include <Windows.h>
+	#pragma comment (lib, "Setupapi.lib")
 	#include <setupapi.h>
 	#define MAX_SERIAL_PORTS 256
 #endif
@@ -346,6 +347,8 @@ protected:
 		/// to MAX_SERIAL_PORTS.
 		///\see ofSerial::portNamesShort
 	HANDLE hComm; ///\< This is the handler for the serial port on Microsoft Windows.
+	OVERLAPPED osWriter = { 0 }; ///\< This is the handler for the serial writer OVERLAPPED on Microsoft Windows.
+	OVERLAPPED osReader = { 0 }; ///\< This is the handler for the serial reader OVERLAPPED on Microsoft Windows.
 	int nPorts;  ///\< \brief Number of serial devices (ports) on Microsoft Windows.
 	bool bPortsEnumerated;  ///\< \brief Indicate that all serial ports (on Microsoft Windows) have been enumerated.
 
