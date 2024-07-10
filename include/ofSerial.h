@@ -319,7 +319,7 @@ protected:
 	std::string deviceType;  ///\< \brief Name of the device on the other end of the serial connection.
 	std::vector <ofSerialDeviceInfo> devices;  ///\< This vector stores information about all serial devices found.
 	bool bHaveEnumeratedDevices;  ///\< \brief Indicate having enumerated devices (serial ports) available.
-	bool bInited;  ///\< \brief Indicate the successful initialization of the serial connection.
+	bool bInited = false;;  ///\< \brief Indicate the successful initialization of the serial connection.
 
 #ifdef TARGET_WIN32
 
@@ -346,7 +346,7 @@ protected:
 		/// a particular serial port. The length of the array is limited
 		/// to MAX_SERIAL_PORTS.
 		///\see ofSerial::portNamesShort
-	HANDLE hComm; ///\< This is the handler for the serial port on Microsoft Windows.
+	HANDLE hComm = INVALID_HANDLE_VALUE; ///\< This is the handler for the serial port on Microsoft Windows.
 	OVERLAPPED osWriter = { 0 }; ///\< This is the handler for the serial writer OVERLAPPED on Microsoft Windows.
 	OVERLAPPED osReader = { 0 }; ///\< This is the handler for the serial reader OVERLAPPED on Microsoft Windows.
 	int nPorts;  ///\< \brief Number of serial devices (ports) on Microsoft Windows.

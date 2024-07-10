@@ -121,7 +121,6 @@ ofSerial::ofSerial(){
 
 		nPorts = 0;
 		bPortsEnumerated = false;
-		hComm = nullptr;
 		oldTimeout = { 0 };
 		portNamesShort = new char * [MAX_SERIAL_PORTS];
 		portNamesFriendly = new char * [MAX_SERIAL_PORTS];
@@ -261,9 +260,18 @@ void ofSerial::close(){
 
 		if(bInited){
 			SetCommTimeouts(hComm, &oldTimeout);
-			CloseHandle(hComm);
-			CloseHandle(osWriter.hEvent);
-			CloseHandle(osReader.hEvent);
+			if (osWriter.hEvent) {
+				CloseHandle(osWriter.hEvent);
+				osWriter.hEvent = NULL;
+			}
+			if (osReader.hEvent) {
+				CloseHandle(osReader.hEvent);
+				osReader.hEvent = NULL;
+			}
+			if (hComm != INVALID_HANDLE_VALUE) {
+				CloseHandle(hComm);
+				hComm = INVALID_HANDLE_VALUE;
+			}
 			hComm = INVALID_HANDLE_VALUE;
 			bInited = false;
 		}
@@ -459,121 +467,97 @@ bool ofSerial::setup(string portName, int baud, int data, int parity, int stop) 
 		bInited = true;
 		return true;
 
-	#elif defined( TARGET_WIN32 )
-
-		// Get port
-		char pn[sizeof(portName)] = { '\0' };
+	#elif defined(TARGET_WIN32)
+		std::vector<char> pn(portName.size() + 10, '\0');
 		int num;
-		if (sscanf(portName.c_str(), "COM%d", &num) == 1) {
-			// Microsoft KB115831 a.k.a if COM > COM9 you have to use a different syntax
-			sprintf(pn, "\\\\.\\COM%d", num);
-		} else {
-			strncpy(pn, (const char*)portName.c_str(), sizeof(portName) - 1);
+		if (sscanf_s(portName.c_str(), "COM%d", &num) == 1) {
+			snprintf(pn.data(), pn.size(), "\\\\.\\COM%d", num);
+		}
+		else {
+			strncpy_s(pn.data(), pn.size(), portName.c_str(), _TRUNCATE);
 		}
 
-		// Open serial port:
-		pn[sizeof(portName) - 1] = '\0';
-		hComm = CreateFile(pn, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+		hComm = CreateFile(pn.data(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 		if (hComm == INVALID_HANDLE_VALUE) {
 			std::cerr << "setup(): unable to open " << portName << std::endl;
 			return false;
 		}
 
-		// Default parity=N, data=8, stop=1
 		DCB dcbSerialParams = { 0 };
 		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 		if (!GetCommState(hComm, &dcbSerialParams)) {
 			std::cerr << "setup(): unable to get port status " << portName << std::endl;
-			CloseHandle(hComm);
+			close();
 			return false;
 		}
+
 		int l_baud = CBR_9600;
 		int l_data = 8;
 		int l_stop = ONESTOPBIT;
 		char l_parity = NOPARITY;
 		switch (baud) {
-			case 300:
-			case 1200:
-			case 2400:
-			case 4800:
-			case 9600:
-			case 14400:
-			case 19200:
-			case 28800:
-			case 38400:
-			case 57600:
-			case 115200:
-			case 230400:
-			case 12000000:
-				l_baud = baud;
-				break;
+		case 300: case 1200: case 2400: case 4800: case 9600:
+		case 14400: case 19200: case 28800: case 38400:
+		case 57600: case 115200: case 230400: case 12000000:
+			l_baud = baud;
+			break;
 		}
 		switch (data) {
-			case 5:
-			case 6:
-			case 7:
-				l_data = data;
-				break;
+		case 5: case 6: case 7:
+			l_data = data;
+			break;
 		}
-		switch (l_parity) {
-			case OF_SERIAL_PARITY_E:
-				parity = EVENPARITY; // Even parity
-				break;
-			case OF_SERIAL_PARITY_O:
-				parity = ODDPARITY; // Odd parity
-				break;
+		switch (parity) {
+		case OF_SERIAL_PARITY_E:
+			l_parity = EVENPARITY; // Even parity
+			break;
+		case OF_SERIAL_PARITY_O:
+			l_parity = ODDPARITY; // Odd parity
+			break;
 		}
 		switch (stop) {
-			case 2:
-				l_stop = TWOSTOPBITS; // Two stop bit used in communication
-				break;
+		case 2:
+			l_stop = TWOSTOPBITS; // Two stop bit used in communication
+			break;
 		}
+
 		dcbSerialParams.BaudRate = l_baud;
 		dcbSerialParams.ByteSize = l_data;
 		dcbSerialParams.StopBits = l_stop;
 		dcbSerialParams.Parity = l_parity;
-		//dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
 		if (!SetCommState(hComm, &dcbSerialParams)) {
 			std::cerr << "Erreur à la configuration du port COM" << std::endl;
-			CloseHandle(hComm);
+			close();
 			return false;
 		}
 
-		// Set timeouts
 		COMMTIMEOUTS timeouts = { 0 };
-		timeouts.ReadIntervalTimeout = MAXDWORD;  // Prevent delay between chars
+		timeouts.ReadIntervalTimeout = MAXDWORD;
 		timeouts.ReadTotalTimeoutConstant = 0;
 		timeouts.ReadTotalTimeoutMultiplier = 0;
 		timeouts.WriteTotalTimeoutConstant = 0;
 		timeouts.WriteTotalTimeoutMultiplier = 0;
 		if (!SetCommTimeouts(hComm, &timeouts)) {
 			std::cerr << "setup(): error setting timeouts" << std::endl;
-			CloseHandle(hComm);
+			close();
 			return false;
 		}
 
-
-		// Set event handlers
 		osWriter.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		if (osWriter.hEvent == NULL) {
 			std::cerr << "setup(): error while creating writing event" << std::endl;
-			CloseHandle(hComm);
+			close();
 			return false;
 		}
 		osReader.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		if (osReader.hEvent == NULL) {
 			std::cerr << "setup(): error while creating reading event" << std::endl;
-			CloseHandle(hComm);
+			close();
 			return false;
 		}
 
-		// Purge RX and TX
-		//PurgeComm(hComm, PURGE_RXCLEAR | PURGE_TXCLEAR);
-
-		// OK
 		bInited = true;
 		return true;
-
 	#else
 
 		std::cerr << "Not implemented in this platform" << std::endl;
